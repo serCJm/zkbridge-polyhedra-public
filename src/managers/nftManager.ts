@@ -7,6 +7,7 @@ import {
 	ethers,
 	getAddress,
 } from "ethers";
+import { setTimeout } from "timers/promises";
 import { config } from "../../config.js";
 import { BNB_TESTNET_OP_BRIDGE_ABI } from "../../data/ABIs/bnb-testnet-op-bridge-abi.js";
 import { NFT_ABI } from "../../data/ABIs/nft-abi.js";
@@ -77,6 +78,7 @@ class NFTContract {
 		const balance = await this.NFTContract.balanceOf(this.walletAddress);
 		if (!balance) {
 			await this.mint();
+			if (this.chain === "celo") await setTimeout(120000);
 		}
 		logger.info`Getting NFT ID...`;
 		const totalSupply = await this.NFTContract.totalSupply();
