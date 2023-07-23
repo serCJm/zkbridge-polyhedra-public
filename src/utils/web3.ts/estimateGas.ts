@@ -33,41 +33,33 @@ export async function estimateGas(
 ): Promise<EstimateGasReturnProps> {
 	logger.info`Running estimateGas...`;
 	try {
-		const provider = ProviderManager.getProvider(chain);
-		const MATIC_GAS_INFO = await gotWithHeaders.get<GasInfoResponse>(
-			"https://gasstation.polygon.technology/v2",
-			{
-				responseType: "json",
-			}
-		);
-
 		if (chain === Chains.Celo)
 			return {
 				gasLimit: BigInt(300000),
 			};
 
+		const provider = ProviderManager.getProvider(chain);
+
 		const block = await provider.getBlock("latest");
-
 		const baseFee = block?.baseFeePerGas;
-		if (!baseFee) {
-			logger.warn`Can't obtain Base Fee on ${chain.toUpperCase()}`;
-		}
-
 		const feeData = await provider.getFeeData();
 
 		let gasPrice;
 		let maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || undefined;
 
 		if (chain === Chains.Polygon) {
+			const MATIC_GAS_INFO = await gotWithHeaders.get<GasInfoResponse>(
+				"https://gasstation.polygon.technology/v2",
+				{
+					responseType: "json",
+				}
+			);
 			maxPriorityFeePerGas = parseUnits(
 				Math.ceil(MATIC_GAS_INFO.body.fast.maxPriorityFee).toString(),
 				"gwei"
 			);
 		} else if (chain === Chains.BSC) {
 			gasPrice = parseUnits("1", "gwei");
-		}
-		if (!maxPriorityFeePerGas) {
-			logger.warn`Can't obtain Max Priority Fee Per Gas`;
 		}
 
 		let maxFeePerGas;
