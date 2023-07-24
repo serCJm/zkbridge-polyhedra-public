@@ -69,7 +69,8 @@ class NFTContract {
 		logger.info`Minting on contract: ${this.contractName}`;
 
 		const mintTx = await this.NFTContract.mint(gas);
-		await getTransactionState(mintTx, `minting ${this.contractName}`, 3);
+
+		await getTransactionState(mintTx, `minting ${this.contractName}`, 5);
 
 		return this;
 	}
@@ -78,7 +79,11 @@ class NFTContract {
 		const balance = await this.NFTContract.balanceOf(this.walletAddress);
 		if (!balance) {
 			await this.mint();
-			if (this.chain === "celo") await setTimeout(120000);
+			const waitTime = randomNumber(60000, 120000);
+			logger.warn`Beep beep simulating human after mint, waiting ${
+				waitTime / 1000
+			} seconds...`;
+			await setTimeout(waitTime);
 		}
 		logger.info`Getting NFT ID...`;
 		const totalSupply = await this.NFTContract.totalSupply();
@@ -86,7 +91,7 @@ class NFTContract {
 		const startingRange =
 			totalSupply <= BigInt(10000)
 				? BigInt(0)
-				: totalSupply - BigInt(5000);
+				: totalSupply - BigInt(2000);
 
 		const nfts = await this.NFTContract.tokensOfOwnerIn(
 			this.walletAddress,
@@ -140,6 +145,7 @@ class NFTContract {
 
 			if (this.contractName === "greenfield") {
 				logger.warn`Don't need to bridge ${this.contractName}`;
+				return;
 			}
 
 			await this.approve();
@@ -149,12 +155,13 @@ class NFTContract {
 			const tokenAddress = await this.NFTContract.getAddress();
 
 			let toChain;
-
 			let bridgeTx;
+
 			if (this.lzrBridge) {
-				const chains = [Chains.BSC, Chains.Polygon, Chains.Core].filter(
-					(chain) => chain !== this.chain
-				);
+				const chains =
+					this.chain === Chains.Celo || this.chain === Chains.Core
+						? [Chains.Polygon]
+						: [Chains.Core, Chains.Celo];
 
 				toChain = chains[randomNumber(0, chains.length - 1)];
 
@@ -236,10 +243,8 @@ class NFTContract {
 					} from ${this.chain.toUpperCase()} to ${toChain.toUpperCase()}`,
 					10
 				);
-
-				if (this.session)
-					await this.claimSession(toChain, bridgeTx.hash);
 			}
+			if (this.session) await this.claimSession(toChain, bridgeTx.hash);
 		};
 
 		await asyncRetry(operation, handleInsufficientBalance, [
@@ -316,21 +321,30 @@ class NFTContract {
 
 	private async claimSession(toChain: ZKBridgeChainsType, hash: string) {
 		logger.info`Starting claimSession...`;
+
 		if (!this.session)
 			throw new Error("ZKBridge website session was not started");
-		const { orderId, orderData } = await this.session.runSession(
+
+		const orderId = await this.session.runSession(
 			this.chain,
 			toChain,
 			hash,
 			await this.NFTContract.getAddress(),
-			this.nftId!
+			this.nftId!,
+			this.lzrBridge
 		);
 
-		const claimHash = await this.claimNFT(orderData);
+		if (config.MODULES.NFTBRIDGE.ENABLE_CLAIM && !this.lzrBridge) {
+			const orderData = await this.session.generateProof(
+				hash,
+				this.chain
+			);
+			const claimHash = await this.claimNFT(orderData);
 
-		await this.session.claimOrder(claimHash, orderId);
+			await this.session.claimOrder(claimHash, orderId);
 
-		logger.success`NFT claimed`;
+			logger.success`NFT claimed`;
+		}
 	}
 }
 

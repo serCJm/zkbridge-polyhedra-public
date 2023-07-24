@@ -29,7 +29,8 @@ export const config = {
 		},
 		[Modules.NFTBRIDGE]: {
 			ENABLED: true, // true or false
-			ENABLE_SESSION: false, // runs login session on zkbridge.com. Proxy usage is recommended.
+			ENABLE_SESSION: true, // runs login session on zkbridge.com. Proxy usage is recommended.
+			ENABLE_CLAIM: false, // true/false. Claim nft when transfer with zkbridge
 		},
 	},
 };

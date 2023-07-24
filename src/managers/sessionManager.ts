@@ -139,7 +139,8 @@ export class SessionManager {
 		toChain: ChainsType,
 		hash: string,
 		nftAddress: string,
-		nftId: number
+		nftId: number,
+		isL0: boolean
 	) {
 		logger.info`Starting createOrder...`;
 
@@ -154,7 +155,7 @@ export class SessionManager {
 				},
 			],
 			from: this.address.toLowerCase(),
-			isL0: false,
+			isL0,
 			sourceChainId,
 			targetChainId,
 			to: this.address.toLowerCase(),
@@ -176,7 +177,7 @@ export class SessionManager {
 		throw new Error("Failed to create order");
 	}
 
-	private async generateProof(hash: string, fromChain: ZKBridgeChainsType) {
+	async generateProof(hash: string, fromChain: ZKBridgeChainsType) {
 		const chain_id = BridgeManager.getChainId(fromChain);
 		const payload = {
 			tx_hash: hash,
@@ -221,7 +222,8 @@ export class SessionManager {
 		toChain: ZKBridgeChainsType,
 		hash: string,
 		nftAddress: string,
-		nftId: number
+		nftId: number,
+		isL0: boolean
 	) {
 		if (!this.sessionStarted)
 			throw new Error("Not signed in. Need to startSession first!");
@@ -231,9 +233,9 @@ export class SessionManager {
 			toChain,
 			hash,
 			nftAddress,
-			nftId
+			nftId,
+			isL0
 		);
-		const orderData = await this.generateProof(hash, fromChain);
-		return { orderId, orderData };
+		return orderId;
 	}
 }
