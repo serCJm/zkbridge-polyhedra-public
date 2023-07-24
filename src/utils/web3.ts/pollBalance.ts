@@ -29,7 +29,7 @@ async function pollUntilBalanceIncreases(
 	let startBalance = await getBalance();
 	while (true) {
 		const balance = await getBalance();
-		logger.info`Balance on ${network.toUpperCase()} chain: ${format(
+		logger.log`Balance on ${network.toUpperCase()} chain: ${format(
 			balance
 		)}`;
 		if (balance > startBalance) {
