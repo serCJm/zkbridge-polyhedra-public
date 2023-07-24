@@ -43,6 +43,10 @@ export const LAYER_ZERO_DATA: L0ChainDataType = {
 		endpoint: "0x9740FF91F1985D8d2B71494aE1A2f723bb3Ed9E4",
 		lzrMailbox: "0xe6eb0b3A1b0c542aCCB40a86565786Fcf8a42EF0",
 	},
+	[Chains.Celo]: {
+		chainId: 125,
+		endpoint: "0x3A73033C0b1407574C76BdBAc67f126f6b4a9AA9",
+	},
 };
 
 export class LayerZeroManager {

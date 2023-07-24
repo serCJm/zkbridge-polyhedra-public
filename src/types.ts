@@ -70,15 +70,10 @@ export type ZKBridgeData = {
 export type ZKBridgeDataType = Record<ZKBridgeChainsType, ZKBridgeData>;
 
 // L0 CHAINS
-export const {
-	BNBTestnet: BNBTestnetL0,
-	BNBOp: BNBOpL0,
-	Celo: CeloL0,
-	...L0Chains
-} = Chains;
+export const { BNBTestnet: BNBTestnetL0, BNBOp: BNBOpL0, ...L0Chains } = Chains;
 export type L0ChainType = Exclude<
 	(typeof L0Chains)[keyof typeof L0Chains],
-	"BNBTestnet" | "BNBOp" | "Celo"
+	"BNBTestnet" | "BNBOp"
 >;
 export type L0ChainKey = keyof typeof L0Chains;
 export type L0Data = {
