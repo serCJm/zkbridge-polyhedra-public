@@ -3,7 +3,6 @@ export const NFT_DATA: NFTDataType = {
 	[Chains.BSC]: {
 		greenfield: "0x13d23d867e73af912adf5d5bd47915261efa28f2",
 		opBNB: "0x9c614a8e5a23725214024d2c3633be30d44806f9",
-		zkLightClient: "0xD2cCC9EE7Ea2ccd154c727A46D475ddA49E99852",
 		pandaCode: "0x87a218Ae43C136B3148A45EA1A282517794002c8",
 	},
 	[Chains.Polygon]: {
