@@ -15,7 +15,13 @@ import { ProviderManager } from "../../data/chain-data.js";
 import { LayerZeroManager } from "../../data/lzr-data.js";
 import { NFT_DATA } from "../../data/nft-data.js";
 import { BridgeManager } from "../../data/zkbridge-data.js";
-import { Chains, NFTChainsType, Proxy, ZKBridgeChainsType } from "../types.js";
+import {
+	Chains,
+	L0ChainType,
+	NFTChainsType,
+	Proxy,
+	ZKBridgeChainsType,
+} from "../types.js";
 import { asyncRetry } from "../utils/asyncRetry.js";
 import { countdownTimer } from "../utils/countdownTimer.js";
 import { logger } from "../utils/logger.js";
@@ -36,14 +42,15 @@ class NFTContract {
 	private bridgeContract: Contract;
 
 	constructor(
-		private chain: ZKBridgeChainsType,
+		private fromChain: ZKBridgeChainsType,
+		private toChain: L0ChainType | ZKBridgeChainsType,
 		private contractName: string,
 		private wallet: Wallet | HDNodeWallet,
 		private contract: BaseContract,
 		private session: SessionManager | undefined
 	) {
-		this.chain = chain;
-		this.provider = ProviderManager.getProvider(chain);
+		this.fromChain = fromChain;
+		this.provider = ProviderManager.getProvider(fromChain);
 
 		this.walletAddress = this.wallet.address;
 		this.signer = this.wallet.connect(this.provider);
@@ -52,27 +59,39 @@ class NFTContract {
 
 		this.nftId;
 
-		this.lzrBridge = contractName !== "opBNB";
+		this.lzrBridge = this.toChain !== "bnbOp" && this.toChain !== "combo";
 		this.bridgeContract = this.lzrBridge
-			? BridgeManager.getNFTBridgeContracts(this.chain).lzrAddress
-			: BridgeManager.getNFTBridgeContracts(this.chain).zkAddress;
+			? BridgeManager.getNFTBridgeContracts(this.fromChain).lzrAddress
+			: BridgeManager.getNFTBridgeContracts(this.fromChain).zkAddress;
 		this.bridgeContract = this.bridgeContract.connect(
 			this.signer
 		) as Contract;
 	}
 
 	private async mint() {
-		logger.info`Starting NFT mint...`;
+		try {
+			logger.info`Starting NFT mint...`;
 
-		const gas = await estimateGas(this.chain, this.NFTContract, "mint");
+			const gas = await estimateGas(
+				this.fromChain,
+				this.NFTContract,
+				"mint"
+			);
 
-		logger.info`Minting on contract: ${this.contractName}`;
+			logger.info`Minting on contract: ${this.contractName}`;
 
-		const mintTx = await this.NFTContract.mint(gas);
+			const mintTx = await this.NFTContract.mint(gas);
 
-		await getTransactionState(mintTx, `minting ${this.contractName}`, 5);
+			await getTransactionState(
+				mintTx,
+				`minting ${this.contractName}`,
+				5
+			);
 
-		return this;
+			return this;
+		} catch (error) {
+			console.log(error);
+		}
 	}
 
 	private async getId(): Promise<NFTContract> {
@@ -122,7 +141,7 @@ class NFTContract {
 		const txArgs = [bridgeAddress, this.nftId];
 
 		const gas = await estimateGas(
-			this.chain,
+			this.fromChain,
 			this.NFTContract,
 			"approve",
 			...txArgs
@@ -135,7 +154,7 @@ class NFTContract {
 			approveTx,
 			`approving ${this.contractName.toUpperCase()} with ID ${
 				this.nftId
-			} for bridge on ${this.chain.toUpperCase()}`
+			} for bridge on ${this.fromChain.toUpperCase()}`
 		);
 	}
 
@@ -150,22 +169,14 @@ class NFTContract {
 
 			await this.approve();
 
-			logger.info`Starting bridge from ${this.chain.toUpperCase()} for ${this.contractName.toUpperCase()}...`;
+			logger.info`Starting bridge from ${this.fromChain.toUpperCase()} for ${this.contractName.toUpperCase()}...`;
 
 			const tokenAddress = await this.NFTContract.getAddress();
 
-			let toChain;
 			let bridgeTx;
 
 			if (this.lzrBridge) {
-				const chains =
-					this.chain === Chains.Celo || this.chain === Chains.Core
-						? [Chains.Polygon]
-						: [Chains.Core, Chains.Celo];
-
-				toChain = chains[randomNumber(0, chains.length - 1)];
-
-				const lzrChainId = LayerZeroManager.getChainId(toChain);
+				const lzrChainId = LayerZeroManager.getChainId(this.toChain);
 
 				const txArgs = [
 					tokenAddress,
@@ -178,7 +189,7 @@ class NFTContract {
 				const value = await this.bridgeContract.estimateFee(...txArgs);
 
 				const gas = await estimateGas(
-					this.chain,
+					this.fromChain,
 					this.bridgeContract,
 					"transferNFT",
 					...txArgs,
@@ -194,17 +205,13 @@ class NFTContract {
 					bridgeTx,
 					`bridging with lzrBridge, NFT ${this.contractName.toUpperCase()} with ID ${
 						this.nftId
-					} from ${this.chain.toUpperCase()} to ${toChain.toUpperCase()}`,
+					} from ${this.fromChain.toUpperCase()} to ${this.toChain.toUpperCase()}`,
 					10
 				);
 			} else {
-				toChain = Chains.Nova;
-				if (this.contractName === "opBNB") {
-					// await this.bridgeTestnetBNBtoBNBOp();
-					toChain = Chains.BNBOp;
-				}
-
-				const toZKId = BridgeManager.getChainId(toChain);
+				const toZKId = BridgeManager.getChainId(
+					this.toChain as ZKBridgeChainsType
+				);
 				const fee = await this.bridgeContract.fee(toZKId);
 
 				const recipient = `0x000000000000000000000000${this.walletAddress.slice(
@@ -222,7 +229,7 @@ class NFTContract {
 				];
 
 				const gas = await estimateGas(
-					this.chain,
+					this.fromChain,
 					this.bridgeContract,
 					"transferNFT",
 					...txArgs
@@ -240,17 +247,18 @@ class NFTContract {
 					bridgeTx,
 					`bridging with zkBridge, NFT ${this.contractName.toUpperCase()} with ID ${
 						this.nftId
-					} from ${this.chain.toUpperCase()} to ${toChain.toUpperCase()}`,
+					} from ${this.fromChain.toUpperCase()} to ${this.toChain.toUpperCase()}`,
 					10
 				);
 			}
-			if (this.session) await this.claimSession(toChain, bridgeTx.hash);
+			if (this.session)
+				await this.claimSession(this.toChain, bridgeTx.hash);
 		};
 
 		await asyncRetry(operation, handleInsufficientBalance, [
 			"bridge",
 			this.walletAddress,
-			this.chain,
+			this.fromChain,
 		]);
 		return this;
 	}
@@ -319,14 +327,17 @@ class NFTContract {
 		return claimTx.hash;
 	}
 
-	private async claimSession(toChain: ZKBridgeChainsType, hash: string) {
+	private async claimSession(
+		toChain: L0ChainType | ZKBridgeChainsType,
+		hash: string
+	) {
 		logger.info`Starting claimSession...`;
 
 		if (!this.session)
 			throw new Error("ZKBridge website session was not started");
 
 		const orderId = await this.session.runSession(
-			this.chain,
+			this.fromChain,
 			toChain,
 			hash,
 			await this.NFTContract.getAddress(),
@@ -337,7 +348,7 @@ class NFTContract {
 		if (config.MODULES.NFTBRIDGE.ENABLE_CLAIM && !this.lzrBridge) {
 			const orderData = await this.session.generateProof(
 				hash,
-				this.chain
+				this.fromChain
 			);
 			const claimHash = await this.claimNFT(orderData);
 
@@ -349,29 +360,49 @@ class NFTContract {
 }
 
 export class NFTContractManager {
-	contracts: { [key: string]: BaseContract } = {};
-	contractChains: { [key: string]: string } = {};
+	#excludedChains: string[] = [];
+	#contracts: Record<NFTChainsType, { [key: string]: BaseContract }> =
+		{} as Record<NFTChainsType, { [key: string]: BaseContract }>;
 
 	constructor() {
 		for (const chain in NFT_DATA) {
+			this.#contracts[chain as NFTChainsType] = {};
 			for (const contractName in NFT_DATA[chain as NFTChainsType]) {
 				const address = NFT_DATA[chain as NFTChainsType][contractName];
 
-				this.contracts[contractName] = new ethers.Contract(
-					address,
-					NFT_ABI
-				);
-				this.contractChains[contractName] = chain as NFTChainsType;
+				this.#contracts[chain as NFTChainsType][contractName] =
+					new ethers.Contract(address, NFT_ABI);
 			}
 		}
 	}
 
-	private getChainOfContract(contractName: string): NFTChainsType {
-		return this.contractChains[contractName] as NFTChainsType;
+	async #getExcludedChains(address: string, contractName: string) {
+		this.#excludedChains = [];
+		for (const chain in this.#contracts) {
+			if (this.#contracts[chain as NFTChainsType][contractName]) {
+				const pandaContract = this.#contracts[chain as NFTChainsType][
+					contractName
+				].connect(
+					ProviderManager.getProvider(chain as NFTChainsType)
+				) as Contract;
+
+				const balance = await pandaContract.balanceOf(address);
+
+				if (balance) this.#excludedChains.push(chain);
+			} else {
+				logger.warn`Missing contract address for ${contractName} on ${chain}`;
+				continue;
+			}
+		}
 	}
 
 	async randomMint(wallet: Wallet | HDNodeWallet, proxy?: Proxy) {
-		const contractNames = shuffleArr(Object.keys(this.contracts));
+		const fromData = shuffleArr([
+			{ fromChain: Chains.BSC, contractName: "pandaCode" },
+			{ fromChain: Chains.Polygon, contractName: "pandaPixel" },
+			{ fromChain: Chains.Core, contractName: "pandaMelody" },
+			{ fromChain: Chains.Celo, contractName: "pandaGuardian" },
+		]);
 
 		let session;
 		if (config.MODULES.NFTBRIDGE.ENABLE_SESSION) {
@@ -379,23 +410,43 @@ export class NFTContractManager {
 			await session.startSession();
 		}
 
-		for (const contractName of contractNames) {
-			const chain = this.getChainOfContract(contractName);
+		for (const { contractName, fromChain } of fromData) {
+			await this.#getExcludedChains(wallet.address, contractName);
 
-			const contract = new NFTContract(
-				chain,
-				contractName,
-				wallet,
-				this.contracts[contractName],
-				session
+			if (fromChain === Chains.Celo || fromChain === Chains.Core) {
+				this.#excludedChains.push(Chains.Mantle, Chains.Core);
+			}
+
+			let toChains = [
+				Chains.BSC,
+				Chains.Polygon,
+				Chains.Core,
+				Chains.Celo,
+				Chains.Mantle,
+				Chains.BNBOp,
+				Chains.Combo,
+			].filter(
+				(chain) =>
+					!this.#excludedChains.includes(chain) && chain !== fromChain
 			);
 
-			await contract.bridge();
+			for (const toChain of toChains) {
+				const contract = new NFTContract(
+					fromChain,
+					toChain,
+					contractName,
+					wallet,
+					this.#contracts[fromChain as NFTChainsType][contractName],
+					session
+				);
 
-			await countdownTimer(
-				config.MIN_BRIDGE_WAIT_TIME,
-				config.MAX_BRIDGE_WAIT_TIME
-			);
+				await contract.bridge();
+
+				await countdownTimer(
+					config.MIN_BRIDGE_WAIT_TIME,
+					config.MAX_BRIDGE_WAIT_TIME
+				);
+			}
 		}
 	}
 }
