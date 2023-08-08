@@ -46,6 +46,10 @@ export const ZK_BRIDGE_DATA: ZKBridgeDataType = {
 		id: 18,
 		lzrNFTBridge: "0xe47b0a5f2444f9b360bd18b744b8d511cfbf98c6",
 	},
+	[Chains.Combo]: {
+		id: 114,
+		nftClaim: "0x2ed78a532c2bfdb8d739f1f27bad87d5e27cccd1",
+	},
 };
 
 type NFTBridgesType = {
