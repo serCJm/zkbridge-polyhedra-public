@@ -6,6 +6,7 @@ import { ChainsType, Proxy, ZKBridgeChainsType } from "../types.js";
 import { gotWithProxy } from "../utils/gotHeadersProxy.js";
 import { logger } from "../utils/logger.js";
 import { ProviderManager } from "./../../data/chain-data.js";
+import { L0ChainType } from "./../types.js";
 
 type AuthResponse = {
 	status: string;
@@ -219,7 +220,7 @@ export class SessionManager {
 
 	async runSession(
 		fromChain: ZKBridgeChainsType,
-		toChain: ZKBridgeChainsType,
+		toChain: L0ChainType | ZKBridgeChainsType,
 		hash: string,
 		nftAddress: string,
 		nftId: number,
