@@ -58,6 +58,16 @@ export const CHAIN_DATA: ChainsDataType = {
 		explorer: "https://celoscan.io/",
 		id: 42220,
 	},
+	[Chains.Mantle]: {
+		rpc: "https://mantle.publicnode.com",
+		explorer: "https://explorer.mantle.xyz/",
+		id: 5000,
+	},
+	[Chains.Combo]: {
+		rpc: "https://test-rpc.combonetwork.io",
+		explorer: "https://combotrace-testnet.nodereal.io/",
+		id: 91715,
+	},
 };
 
 export class ProviderManager {
