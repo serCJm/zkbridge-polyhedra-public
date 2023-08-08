@@ -417,7 +417,7 @@ export class NFTContractManager {
 				this.#excludedChains.push(Chains.Mantle, Chains.Core);
 			}
 
-			let toChains = [
+			let toChains = shuffleArr([
 				Chains.BSC,
 				Chains.Polygon,
 				Chains.Core,
@@ -425,7 +425,7 @@ export class NFTContractManager {
 				Chains.Mantle,
 				Chains.BNBOp,
 				Chains.Combo,
-			].filter(
+			]).filter(
 				(chain) =>
 					!this.#excludedChains.includes(chain) && chain !== fromChain
 			);
