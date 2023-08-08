@@ -22,7 +22,7 @@ export const config = {
 		PROXY_ENFORCE: true, // true/false. Enforce proxy usage for zkbridge.com
 		ORDER: "random",
 		[Modules.MESSENGER]: {
-			ENABLED: true, // true/false
+			ENABLED: false, // true/false
 			FROM_CHAIN: "random", // bsc, polygon, or random
 			TO_CHAIN: [], // Optional. Fill with Chains type: Chains.Nova, etc. See ./data/lzr-data.ts for more options.
 			MESSAGE: "ZK light client is live on LayerZero! 🌈", // your message or random
@@ -30,7 +30,7 @@ export const config = {
 		[Modules.NFTBRIDGE]: {
 			ENABLED: true, // true or false
 			ENABLE_SESSION: true, // runs login session on zkbridge.com. Proxy usage is recommended.
-			ENABLE_CLAIM: false, // true/false. Claim nft when transfer with zkbridge
+			ENABLE_CLAIM: true, // true/false. Claim nft when transfer with zkbridge
 		},
 	},
 };
