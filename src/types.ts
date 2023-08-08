@@ -11,6 +11,8 @@ export const Chains = {
 	BNBOp: "bnbOp",
 	Moonbeam: "moonbeam",
 	Celo: "celo",
+	Mantle: "mantle",
+	Combo: "combo",
 } as const;
 export type ChainsType = (typeof Chains)[keyof typeof Chains];
 export type ChainsTypeKey = keyof typeof Chains;
@@ -28,19 +30,12 @@ export const {
 	Optimism,
 	Nova,
 	BNBTestnet: BNBTestnetNFT,
-	BNBOp: BNBOpNFT,
 	Moonbeam: MoonbeamNFT,
 	...NFTChains
 } = Chains;
 export type NFTChainsType = Exclude<
 	(typeof NFTChains)[keyof typeof NFTChains],
-	| "Arbitrum"
-	| "Avalanche"
-	| "Optimism"
-	| "Nova"
-	| "BNBTestnet"
-	| "BNBOp"
-	| "Moonbeam"
+	"Arbitrum" | "Avalanche" | "Optimism" | "Nova" | "BNBTestnet" | "Moonbeam"
 >;
 export type NFTChainsKey = keyof typeof NFTChains;
 
@@ -51,10 +46,14 @@ export type NFTData = {
 export type NFTDataType = Record<NFTChainsType, NFTData>;
 
 // ZKBRIDGE CHAINS
-export const { BNBTestnet: BNBTestnetZK, ...ZKBridgeChains } = Chains;
+export const {
+	BNBTestnet: BNBTestnetZK,
+	Mantle: MantleZK,
+	...ZKBridgeChains
+} = Chains;
 export type ZKBridgeChainsType = Exclude<
 	(typeof ZKBridgeChains)[keyof typeof ZKBridgeChains],
-	"BNBTestnet"
+	"BNBTestnet" | "Mantle"
 >;
 export type ZKBridgeChainsKey = keyof typeof ZKBridgeChains;
 
@@ -70,10 +69,15 @@ export type ZKBridgeData = {
 export type ZKBridgeDataType = Record<ZKBridgeChainsType, ZKBridgeData>;
 
 // L0 CHAINS
-export const { BNBTestnet: BNBTestnetL0, BNBOp: BNBOpL0, ...L0Chains } = Chains;
+export const {
+	BNBTestnet: BNBTestnetL0,
+	BNBOp: BNBOpL0,
+	Combo: ComboL0,
+	...L0Chains
+} = Chains;
 export type L0ChainType = Exclude<
 	(typeof L0Chains)[keyof typeof L0Chains],
-	"BNBTestnet" | "BNBOp"
+	"BNBTestnet" | "BNBOp" | "Combo"
 >;
 export type L0ChainKey = keyof typeof L0Chains;
 export type L0Data = {
